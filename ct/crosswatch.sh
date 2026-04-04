@@ -54,6 +54,8 @@ function update_script() {
   exit
 }
 
+INSTALL_SCRIPT="https://raw.githubusercontent.com/doctorjz/ProxmoxVE/main/install/crosswatch-install.sh"
+
 start
 build_container
 description
