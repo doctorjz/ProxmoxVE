@@ -1,0 +1,28 @@
+{
+  "name": "CrossWatch",
+  "slug": "crosswatch",
+  "categories": [15],
+  "date_created": "2026-04-03",
+  "type": "ct",
+  "updateable": true,
+  "privileged": false,
+  "interface_port": 8787,
+  "documentation": "https://wiki.crosswatch.app",
+  "website": "https://www.crosswatch.app",
+  "logo": "https://raw.githubusercontent.com/cenodude/CrossWatch/main/assets/logo.png",
+  "description": "CrossWatch synchronizes your watch history, ratings, and watchlists across Plex, Jellyfin, Emby, Trakt, SIMKL, AniList, TMDb, MDBList, and more.",
+  "install_methods": [
+    {
+      "type": "default",
+      "script": "ct/crosswatch.sh",
+      "resources": {
+        "cpu": 2,
+        "ram": 1024,
+        "hdd": 8,
+        "os": "Debian",
+        "version": "12"
+      }
+    }
+  ],
+  "notes": []
+}
