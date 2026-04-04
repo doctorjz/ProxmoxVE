@@ -7,7 +7,6 @@
 source /dev/stdin <<<"$(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)"
 
 APP="CrossWatch"
-var_install="${APP,,}"
 INSTALL_DIR="/opt/crosswatch"
 SERVICE_USER="crosswatch"
 PORT="8787"
@@ -89,8 +88,65 @@ systemctl enable --quiet crosswatch.service
 systemctl start crosswatch.service
 msg_ok "CrossWatch service started"
 
+msg_info "Creating update command"
+cat <<'EOF' >/usr/local/bin/update
+#!/usr/bin/env bash
+
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+RED='\033[0;31m'
+NC='\033[0m'
+
+INSTALL_DIR="/opt/crosswatch"
+SERVICE="crosswatch.service"
+
+if [[ ! -d "$INSTALL_DIR" ]]; then
+  echo -e "${RED}No CrossWatch installation found at $INSTALL_DIR${NC}"
+  exit 1
+fi
+
+CURRENT=$(cat "$INSTALL_DIR/VERSION" 2>/dev/null || echo "unknown")
+RELEASE=$(curl -fsSL https://api.github.com/repos/cenodude/CrossWatch/releases/latest \
+  | grep "tag_name" \
+  | awk '{print $2}' \
+  | sed 's/[",v]//g')
+
+if [[ -z "$RELEASE" ]]; then
+  echo -e "${RED}Could not fetch latest release from GitHub.${NC}"
+  exit 1
+fi
+
+echo -e "${YELLOW}CrossWatch Update Check${NC}"
+echo -e "  Installed : ${CURRENT}"
+echo -e "  Latest    : ${RELEASE}"
+
+if [[ "$RELEASE" == "$CURRENT" ]]; then
+  echo -e "${GREEN}Already up to date — no update needed.${NC}"
+  exit 0
+fi
+
+echo -e "${YELLOW}Updating CrossWatch from ${CURRENT} to ${RELEASE}...${NC}"
+
+systemctl stop "$SERVICE"
+
+cd "$INSTALL_DIR"
+git fetch --tags --quiet
+git checkout "v${RELEASE}" --quiet 2>/dev/null
+
+source "$INSTALL_DIR/venv/bin/activate"
+pip install --upgrade --quiet -r requirements.txt
+deactivate
+
+echo "${RELEASE}" > "$INSTALL_DIR/VERSION"
+
+systemctl start "$SERVICE"
+echo -e "${GREEN}CrossWatch updated to v${RELEASE} and restarted.${NC}"
+EOF
+chmod +x /usr/local/bin/update
+msg_ok "Update command created — type 'update' anytime to update CrossWatch"
+
 motd_ssh
 customize
 
 msg_ok "Completed Successfully!"
-echo -e "${APP} is accessible at: ${BGN}http://$(hostname -I | awk '{print $1}'):${PORT}${CL}"
+echo -e "CrossWatch is accessible at: http://$(hostname -I | awk '{print $1}'):${PORT}"
