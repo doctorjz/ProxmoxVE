@@ -54,10 +54,13 @@ function update_script() {
   exit
 }
 
-INSTALL_SCRIPT="https://raw.githubusercontent.com/doctorjz/ProxmoxVE/main/install/crosswatch-install.sh"
-
 start
 build_container
+
+msg_info "Running CrossWatch installer"
+pct exec "$CTID" -- bash -c "$(curl -fsSL https://raw.githubusercontent.com/doctorjz/ProxmoxVE/main/install/crosswatch-install.sh)"
+msg_ok "CrossWatch installer finished"
+
 description
 
 msg_ok "Completed Successfully!\n"
