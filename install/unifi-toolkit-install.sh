@@ -5,7 +5,11 @@
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
 # Source: https://github.com/Crosstalk-Solutions/unifi-toolkit
 
-source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
+if [[ -n "$FUNCTIONS_FILE_PATH" ]]; then
+  source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
+else
+  source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)
+fi
 color
 verb_ip6
 catch_errors
@@ -37,16 +41,16 @@ $STD apt-get install -y \
   docker-compose-plugin
 msg_ok "Installed Docker"
 
-msg_info "Setting Up ${APP}"
+msg_info "Configuring ${APP}"
 mkdir -p /opt/unifi-toolkit/data
 
-# Generate a secure Fernet encryption key
-ENCRYPTION_KEY=$(docker run --rm python:3-slim \
-  sh -c "pip install -q cryptography && python -c \
-  'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'" \
-  2>/dev/null)
+# Generate a Fernet encryption key using Python (available in Debian 12)
+ENCRYPTION_KEY=$(python3 -c \
+  "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())" 2>/dev/null \
+  || docker run --rm python:3-slim \
+     sh -c "pip install -q cryptography && python -c \
+     'from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())'")
 
-# Write .env file
 cat > /opt/unifi-toolkit/.env <<EOF
 ENCRYPTION_KEY=${ENCRYPTION_KEY}
 DEPLOYMENT_TYPE=local
@@ -56,67 +60,48 @@ UNIFI_VERIFY_SSL=false
 APP_PORT=8000
 EOF
 
-# Write docker-compose.yml
-cat > /opt/unifi-toolkit/docker-compose.yml <<'EOF'
+cat > /opt/unifi-toolkit/docker-compose.yml <<'COMPOSEOF'
 services:
   unifi-toolkit:
     image: crosstalksolutions/unifi-toolkit:latest
     container_name: unifi-toolkit
     restart: unless-stopped
     ports:
-      - "${APP_PORT:-8000}:${APP_PORT:-8000}"
+      - "8000:8000"
     volumes:
       - ./data:/app/data
       - ./.env:/app/.env:ro
     env_file:
       - .env
-EOF
+COMPOSEOF
 
-# Fix permissions
 chown -R 1000:1000 /opt/unifi-toolkit/data
 chmod 755 /opt/unifi-toolkit/data
-
 msg_ok "Configured ${APP}"
 
-msg_info "Starting ${APP} Container"
+msg_info "Pulling & Starting ${APP} (this may take a moment)"
 cd /opt/unifi-toolkit
 docker compose pull &>/dev/null
 docker compose up -d &>/dev/null
 msg_ok "Started ${APP}"
 
 msg_info "Creating Update Script"
-cat > /usr/bin/update <<'EOF'
+cat > /usr/bin/update <<'UPDATEEOF'
 #!/usr/bin/env bash
-# UniFi Toolkit updater
-set -e
-
-APP_DIR="/opt/unifi-toolkit"
-
 echo ""
 echo "  Updating UniFi Toolkit..."
 echo ""
-
-cd "$APP_DIR"
-
-echo "  Pulling latest image..."
+cd /opt/unifi-toolkit
 docker compose pull
-
-echo "  Restarting container..."
 docker compose up -d
-
-echo "  Applying database migrations..."
-docker compose exec unifi-toolkit alembic upgrade head || true
-
-echo "  Restarting to apply changes..."
+docker compose exec -T unifi-toolkit alembic upgrade head 2>/dev/null || true
 docker compose restart
-
 echo ""
-echo "  UniFi Toolkit updated successfully!"
-echo "  Access at: http://$(hostname -I | awk '{print $1}'):8000"
+echo "  Update complete! Access at: http://$(hostname -I | awk '{print $1}'):8000"
 echo ""
-EOF
+UPDATEEOF
 chmod +x /usr/bin/update
-msg_ok "Update Script Created"
+msg_ok "Created Update Script"
 
 motd_ssh
 customize
