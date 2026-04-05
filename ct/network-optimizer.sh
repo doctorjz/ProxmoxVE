@@ -6,6 +6,7 @@ source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxV
 # Source: https://github.com/Ozark-Connect/NetworkOptimizer
 
 APP="Network Optimizer"
+INSTALL_SCRIPT_URL="https://raw.githubusercontent.com/doctorjz/ProxmoxVE/main/install/network-optimizer-install.sh"
 var_tags="${var_tags:-network}"
 var_cpu="${var_cpu:-2}"
 var_ram="${var_ram:-2048}"
