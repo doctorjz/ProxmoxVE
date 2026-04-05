@@ -26,11 +26,12 @@ $STD apt install -y \
 msg_ok "Installed Dependencies"
 
 msg_info "Setting up .NET 10 SDK"
-wget -q https://dot.net/v1/dotnet-install.sh -O dotnet-install.sh
-chmod +x dotnet-install.sh
-./dotnet-install.sh --channel 10.0 >/dev/null 2>&1
-export PATH="$HOME/.dotnet:$PATH"
+wget -q https://dot.net/v1/dotnet-install.sh -O /root/dotnet-install.sh
+chmod +x /root/dotnet-install.sh
+/root/dotnet-install.sh --channel 10.0 >/dev/null 2>&1
+export PATH="/root/.dotnet:$PATH"
 export DOTNET_CLI_TELEMETRY_OPTOUT=1
+rm -f /root/dotnet-install.sh
 msg_ok "Setup .NET 10 SDK"
 
 msg_info "Installing Network Optimizer"
@@ -44,6 +45,7 @@ chmod +x /opt/network-optimizer/NetworkOptimizer.Web
 cat << 'EOF' > /opt/network-optimizer/start.sh
 #!/bin/bash
 cd "$(dirname "$0")"
+export PATH="/root/.dotnet:$PATH"
 export TZ="America/Chicago"
 export ASPNETCORE_URLS="http://0.0.0.0:8042"
 export HOST_IP=$(hostname -I | awk '{print $1}')
@@ -54,7 +56,6 @@ EOF
 chmod +x /opt/network-optimizer/start.sh
 
 rm -rf /tmp/NetworkOptimizer
-rm -f ~/dotnet-install.sh
 msg_ok "Installed Network Optimizer"
 
 msg_info "Creating Service"
@@ -83,4 +84,4 @@ msg_ok "Created Service"
 
 motd_ssh
 customize
-cleanup_lxc
+cleanup
