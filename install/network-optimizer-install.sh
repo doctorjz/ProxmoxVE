@@ -5,7 +5,11 @@
 # License: MIT | https://github.com/community-scripts/ProxmoxVE/raw/main/LICENSE
 # Source: https://github.com/Ozark-Connect/NetworkOptimizer
 
-source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
+if [[ -n "$FUNCTIONS_FILE_PATH" ]]; then
+  source /dev/stdin <<<"$FUNCTIONS_FILE_PATH"
+else
+  source <(curl -fsSL https://raw.githubusercontent.com/community-scripts/ProxmoxVE/main/misc/install.func)
+fi
 color
 verb_ip6
 catch_errors
@@ -14,7 +18,7 @@ network_check
 update_os
 
 msg_info "Installing Dependencies"
-$STD apt install -y \
+$STD apt-get install -y \
   sshpass \
   iperf3 \
   wget \
@@ -79,6 +83,7 @@ WantedBy=multi-user.target
 EOF
 
 mkdir -p /opt/network-optimizer/logs
+systemctl daemon-reload
 systemctl enable -q --now network-optimizer
 msg_ok "Created Service"
 
